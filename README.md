@@ -35,21 +35,19 @@ When its installed, you can verify the installation calling `myapp` from the com
 
 ```shell
 $ myapp --help
-Usage: myapp [OPTIONS] COMMAND [ARGS]...
+Usage: myapp [OPTIONS]
 
-  Welcome to myApp CLI!
+  Demo app printing current time to stdout.
 
 Options:
-  --help  Show this message and exit.
-
-Commands:
-  run  Print job name and current time to stdout.
+  --job TEXT  Job name
+  --help      Show this message and exit.
 ```
 
-Execute `run` command to print the current time to console:
+Run it, to print the current time to console:
 
 ```shell
-$ myapp run --job JOB-1 
+$ myapp --job JOB-1 
 15:42:36: JOB-1 started
 ```
 
