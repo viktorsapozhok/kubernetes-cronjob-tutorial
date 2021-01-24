@@ -1,0 +1,17 @@
+aks:
+  cluster_name: myAKSCluster
+  resource_group: myResourceGroup
+  namespace: myApp
+acr:
+  name: myContainerRegistry
+  url: myContainerRegistry/azurecr.io
+jobs:
+  job1:
+    schedule: "1 * * * *"
+    command: "myapp run --job job1"
+  job2:
+    schedule: "3 * * * *"
+    command: "myapp run --job job2"
+  job3:
+    schedule: "5 * * * *"
+    command: "myapp run --job job3"
