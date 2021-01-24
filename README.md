@@ -10,4 +10,4 @@ The [tutorial][1] contains the following sections:
 3. Create and configure a Kubernetes cluster, scale it down to zero with autoscaler.
 4. Schedule and deploy jobs to Kubernetes cluster.
 
-[1]: https://viktorsapozhok.github.io/kubernetes-cronjob-tutorial/ "Running automated tasks with CronJob in Azure Kubernetes Service"
+[1]: https://viktorsapozhok.github.io "Running automated tasks with CronJob in Azure Kubernetes Service"
