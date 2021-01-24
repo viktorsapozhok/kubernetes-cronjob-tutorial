@@ -15,8 +15,8 @@ Read the [tutorial][1] for more.
 
 ## 1. Clone the application
 
-The simple application used in this tutorial to demonstrate the deployment process is 
-a Python app printing the current time to stdout.
+The application used in this tutorial to demonstrate the deployment process is 
+a simple Python app printing the current time to stdout.
 
 Clone the application to your development environment.
 
