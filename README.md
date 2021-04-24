@@ -58,3 +58,63 @@ preparing it to the deployment.
 
 Skip this section and go to the section 3, if you already have docker installed.
 
+Update software repositories to make sure you’ve got access to the latest revisions.
+Then install docker engine.
+
+```bash
+$ sudo apt-get update
+$ sudo apt install docker.io
+```
+
+Now we set up docker service to be running at startup.
+
+```bash
+$ sudo systemctl start docker
+$ sudo systemctl enable docker
+```
+
+You can test the installation verifying docker version.
+
+```bash
+$ docker --version
+```
+
+Now, after docker engine is installed, we install docker compose, a tool for
+defining and running multi-container docker applications. 
+
+Follow the [official installation guide][2]
+
+[2]: https://docs.docker.com/compose/install/ "Install Docker Compose"
+
+Test the installation verifying compose version.
+
+```bash
+$ docker-compose --version
+```
+
+To be able to run docker as a non-root user, we create a new group and add docker to 
+this group.
+
+```bash
+$ sudo groupadd docker
+```
+
+Add your user to the docker group.
+
+```bash
+$ sudo usermod -aG docker $USER
+```
+
+Run the following command, if it doesn’t work then reboot and run it again.
+
+```bash
+$ newgrp docker
+```
+
+Check if docker can be run as non-root.
+
+```bash
+$ docker run hello-world
+```
+
+Reboot if you got error.
