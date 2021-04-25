@@ -1,0 +1,15 @@
+.dockerignore
+.git
+.gitignore
+.idea
+
+Dockerfile
+Makefile
+LICENSE
+README.md
+*.yml
+
+*.egg-info/
+**/__pycache__
+
+docs/

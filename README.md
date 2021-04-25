@@ -76,45 +76,44 @@ $ sudo systemctl enable docker
 You can test the installation verifying docker version.
 
 ```bash
-$ docker --version
+$ sudo docker --version
 ```
 
-Now, after docker engine is installed, we install docker compose, a tool for
-defining and running multi-container docker applications. 
-
-Follow the [official installation guide][2]
-
-[2]: https://docs.docker.com/compose/install/ "Install Docker Compose"
-
-Test the installation verifying compose version.
-
-```bash
-$ docker-compose --version
-```
-
-To be able to run docker as a non-root user, we create a new group and add docker to 
-this group.
+By default, the docker daemon always run as `root` user and other users can access it
+only with `sudo` privileges. To be able to run docker as non-root user, create a new group
+called `docker` and add your user to it.
 
 ```bash
 $ sudo groupadd docker
-```
-
-Add your user to the docker group.
-
-```bash
 $ sudo usermod -aG docker $USER
 ```
 
-Run the following command, if it doesn’t work then reboot and run it again.
+Log out and log back in so that group membership is re-evaluated.
+You can also issue the following command to activate changes.
 
 ```bash
 $ newgrp docker
 ```
 
-Check if docker can be run as non-root.
+Verify if docker can be run as non-root.
 
 ```bash
 $ docker run hello-world
 ```
 
 Reboot if you got error.
+
+Now, after docker engine is installed, we install docker compose, a tool for
+defining and running multi-container docker applications. 
+
+Follow the [official installation guide][2] and test the installation verifying compose version.
+
+[2]: https://docs.docker.com/compose/install/ "Install Docker Compose"
+
+```bash
+$ docker-compose --version
+```
+
+## 3. Create docker image for your Python app
+
+
