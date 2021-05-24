@@ -120,27 +120,26 @@ Now that we have installed our application and docker software, we can build a d
 for the application and run it inside the container. To do that, we create a Dockerfile, a text file
 that contains a list of instructions, which describes how a Docker image is built.
 
-We store Dockerfile in the project root directory and add following instructions to it:
+We store Dockerfile in the project root directory and add the following instructions to it:
 
 ```dockerfile
- 1  FROM python:3.9-slim
- 2
- 3  RUN groupadd --gid 1000 user \
- 4      && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash user
- 5
- 6  COPY requirements.txt .
- 7
- 8  RUN pip install --no-cache-dir -r ./requirements.txt \
- 9      && rm -f requirements.txt
-10
-11  COPY . /home/user/app
-12  WORKDIR /home/user/app
-13
-14  RUN pip install --no-cache-dir . \
-15      && chown -R "1000:1000" /home/user
-16
-17  USER user
-18  CMD tail -f /dev/null
+FROM python:3.9-slim
+
+RUN groupadd --gid 1000 user \
+    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash user
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r ./requirements.txt \
+    && rm -f requirements.txt
+
+COPY . /home/user/app
+WORKDIR /home/user/app
+
+RUN pip install --no-cache-dir . \
+    && chown -R "1000:1000" /home/user
+
+USER user
+CMD tail -f /dev/null
 ```
 
 
