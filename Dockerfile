@@ -10,9 +10,8 @@ RUN pip install --no-cache-dir -r ./requirements.txt \
 COPY . /home/user/app
 WORKDIR /home/user/app
 
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir . \
+    && chown -R "1000:1000" /home/user
 
-RUN chown -R "1000:1000" /home/user
 USER user
-
 CMD tail -f /dev/null
