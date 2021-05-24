@@ -1,11 +1,11 @@
 FROM python:3.9-slim
 
-RUN groupadd --gid 1000 user \
-    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash user
-
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r ./requirements.txt \
     && rm -f requirements.txt
+
+RUN groupadd --gid 1000 user \
+    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash user
 
 COPY . /home/user/app
 WORKDIR /home/user/app

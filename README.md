@@ -116,32 +116,101 @@ $ docker-compose --version
 
 ## 3. Create docker image for your Python app
 
-Now that we have installed our application and docker software, we can build a docker container 
+Now that we have installed our application and docker software, we can build a docker image 
 for the application and run it inside the container. To do that, we create a Dockerfile, a text file
-that contains a list of instructions, which describes how a Docker image is built.
+that contains a list of instructions, which describes how a docker image is built.
 
 We store Dockerfile in the project root directory and add the following instructions to it:
 
 ```dockerfile
 FROM python:3.9-slim
 
-RUN groupadd --gid 1000 user \
-    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash user
-
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r ./requirements.txt \
     && rm -f requirements.txt
+
+RUN groupadd --gid 1000 user \
+    && useradd --uid 1000 --gid 1000 --create-home --shell /bin/bash user
 
 COPY . /home/user/app
 WORKDIR /home/user/app
 
 RUN pip install --no-cache-dir . \
-    && chown -R "1000:1000" /home/user
+    && chown -R "1000:1000" /home/user 
 
 USER user
 CMD tail -f /dev/null
 ```
 
+Here we create a non-root user, as it's not recommended running the container as a root due 
+to some security issues.
+
+We intentionally keep the list of requirements outside `setup.py` to be able to install it
+in a separate layer, before installing the application. The point is that docker is caching 
+every layer (each `RUN` instruction will create a layer) and checks the previous builds
+to use the untouched layers as cache.
+
+In case we don't keep the requirements in a separate file, but instead list them directly in `setup.py`,
+docker will install it again every time we change something in the application code
+and rebuild the image. Therefore, if we want to reduce the building time, we use two
+layers for installation, one for requirements, one for application. 
+
+We also modify `setup.py` to dynamically read the list of requirements from file:
+
+```python
+from setuptools import setup
 
 
+def get_requirements():
+    r = []
+    with open("requirements.txt") as fp:
+        for line in fp.read().split("\n"):
+            if not line.startswith("#"):
+                r += [line.strip()]
+    return r
 
+
+setup(
+    name="app",
+    packages=["app"],
+    include_package_data=True,
+    zip_safe=False,
+    install_requires=get_requirements(),
+    entry_points={
+        "console_scripts": [
+            "myapp=app.cli:main",
+        ]
+    },
+)
+```
+
+We can now build the docker image.
+
+```bash
+$ docker build --tag app .
+```
+
+When building process is over, you can find your image in local image store.
+
+```bash
+$ docker images
+REPOSITORY   TAG        IMAGE ID       CREATED             SIZE
+app          latest     73ac1e524c0e   35 seconds ago      123MB
+python       3.9-slim   609da079b03a   About an hour ago   115MB
+```
+
+All right, now let's run our application inside the container.
+
+```bash
+$ docker run app myapp --job JOB-1 
+20:56:33: JOB-1 started
+```
+
+The container has been started and application was successfully running inside the container.
+You can view the status in the container list.
+
+```bash
+$ docker container ls --all
+CONTAINER ID   IMAGE   COMMAND               CREATED              STATUS                          
+f1f0ab1d329f   app     "myapp --job JOB-1"   About a minute ago   Exited (0) About a minute ago
+```
