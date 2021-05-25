@@ -207,10 +207,41 @@ $ docker run app myapp --job JOB-1
 ```
 
 The container has been started and application was successfully running inside the container.
-You can view the status in the container list.
+When application finished, the container has been stopped. Docker containers are 
+not automatically removed when you stop them. To remove one or more containers, use 
+`docker container rm` command specifying container IDs you want to remove.
+
+You can view the list of all containers using `docker container ls --all` command.
 
 ```bash
 $ docker container ls --all
-CONTAINER ID   IMAGE   COMMAND               CREATED              STATUS                          
-f1f0ab1d329f   app     "myapp --job JOB-1"   About a minute ago   Exited (0) About a minute ago
+CONTAINER ID   IMAGE   COMMAND               CREATED             STATUS                       
+c942c2424719   app     "myapp"               3 seconds ago       Exited (0) 2 seconds ago
+0d311b2708e4   app     "myapp --job JOB-1"   8 seconds ago       Exited (0) 7 seconds ago
 ```
+
+From the list above, you can see the `CONTAINER ID`. Pass it to `docker container rm` command to delete 
+the containers.
+
+```bash
+# remove two containers
+$ docker container rm c942c2424719 0d311b2708e4
+c942c2424719
+0d311b2708e4
+
+# remove one container
+$ docker container rm c942c2424719
+c942c2424719
+```
+
+To remove all stopped containers, use `docker container prune` command.
+
+Note, that you can start the container with `--rm` flag meaning that the container
+will be automatically removed after stop.
+
+```bash
+$ docker run --rm app myapp --job JOB-1 
+```
+
+## 4. Push docker images to the registry
+
