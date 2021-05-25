@@ -184,7 +184,7 @@ setup(
 )
 ```
 
-We can now build the docker image.
+We can now build the docker image using `docker build` command.
 
 ```bash
 $ docker build --tag app .
@@ -244,4 +244,19 @@ $ docker run --rm app myapp --job JOB-1
 ```
 
 ## 4. Push docker images to the registry
+
+Azure Container Registry (ACR) is a private registry for container images, it allows
+you to build, store, and manage container images. In this tutorial, we deploy an ACR instance
+and push a docker image to it. This requires that you have Azure CLI installed. Follow the
+[official guide][3] if you need to install it.
+
+[3]: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli "Install Azure CLI"
+
+To create an ACR instance, we need to have a resource group, a logical container that
+include all the related resources to your solution. Create a new group with `az group create` command or
+use the existing group if you already have one.
+
+```bash
+$ az group create --name myResourceGroup --location westeurope
+```
 
