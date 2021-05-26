@@ -68,7 +68,7 @@ $ myapp --job JOB-1 --slack
 
 If everything is correct then you should receive the same message in your slack channel.
 
-<img src="https://github.com/viktorsapozhok/kubernetes-cronjob-tutorial/blob/master/docs/source/images/slack.png?raw=true" width="400">
+<img src="https://github.com/viktorsapozhok/kubernetes-cronjob-tutorial/blob/master/docs/source/images/slack.png?raw=true" width="700">
 
 Application is installed to your development environment, and we can start preparing it to the deployment.
 
