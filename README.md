@@ -1,6 +1,6 @@
 # kubernetes-cronjob-tutorial
 
-This repository provides a demo on how to deploy cron jobs to Azure Kubernetes Service (AKS).
+This repository provides a tutorial on how to deploy cron jobs to Azure Kubernetes Service (AKS).
 
 You learn how to: 
 
@@ -8,6 +8,7 @@ You learn how to:
 * Create an Azure container registry and push images to the registry.
 * Create and configure a Kubernetes cluster, scale it down to zero with autoscaler.
 * Schedule and deploy jobs to Kubernetes cluster.
+* Automate the deployment process with Makefile.
 
 Read the [tutorial][1] for more.
 
@@ -187,7 +188,7 @@ setup(
 We can now build the docker image using `docker build` command.
 
 ```bash
-$ docker build --tag app .
+$ docker build --tag app:v0 .
 ```
 
 When building process is over, you can find your image in local image store.
@@ -195,7 +196,7 @@ When building process is over, you can find your image in local image store.
 ```bash
 $ docker images
 REPOSITORY   TAG        IMAGE ID       CREATED             SIZE
-app          latest     73ac1e524c0e   35 seconds ago      123MB
+app          v0         73ac1e524c0e   35 seconds ago      123MB
 python       3.9-slim   609da079b03a   About an hour ago   115MB
 ```
 
@@ -259,4 +260,57 @@ use the existing group if you already have one.
 ```bash
 $ az group create --name myResourceGroup --location westeurope
 ```
+
+Now we can create an Azure Container Registry with `az acr create` command. We use the `Basic` SKU, which
+includes 10 GiB storage. Service tier can be changed at any time, you can use `az acr update` command to 
+switch between service tiers.
+
+```bash
+$ az acr create --resource-group myResourceGroup --name vanillacontainerregistry --sku Basic --location westeurope
+```
+
+To push our docker image to the registry, it has to be tagged with the server address `vanillacontainerregistry.azurecr.io`.
+You can find the address on Azure Portal. 
+
+```bash
+$ docker tag app:v0 vanillacontainerregistry.azurecr.io/app:v0
+
+$ docker images
+REPOSITORY                                TAG   IMAGE ID       CREATED        SIZE
+vanillacontainerregistry.azurecr.io/app   v0    46894e5479b8   25 hours ago   123MB
+app                                       v0    46894e5479b8   25 hours ago   123MB
+```
+
+Now, we can log in to the registry and push our container image.
+
+```bash
+$ az acr login --name vanillacontainerregistry
+Login Succeeded
+
+$ docker push vanillacontainerregistry.azurecr.io/app:v0
+The push refers to repository [vanillacontainerregistry.azurecr.io/app]
+d4f6821c5d53: Pushed 
+67a0bfcd1c19: Pushed 
+1493f3cb6eb5: Pushed 
+d713ef9ef160: Pushed 
+b53f0c01f700: Pushed 
+297b05241274: Pushed 
+677735e8b7e0: Pushed 
+0315c2e53dfa: Pushed 
+98a85d041f35: Pushed 
+02c055ef67f5: Pushed 
+v0: digest: sha256:2b11fb037d0c3606dd32daeb95e355655594159de6a8ba11aa0046cad0e93838 size: 2413
+```
+
+That's it. We built a docker image for our Python application, created an Azure Container Registry and
+pushed the image to the repository. You can view the repository with `az acr repository` command or via portal.
+
+```bash
+$ az acr repository show-tags --name vanillacontainerregistry --repository app --output table
+Result
+--------
+v0
+```
+
+All good, move on to the next step.
 
