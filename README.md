@@ -143,6 +143,8 @@ We store Dockerfile in the project root directory and add the following instruct
 ```dockerfile
 FROM python:3.9-slim
 
+ARG SLACK_TEST_URL
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r ./requirements.txt \
     && rm -f requirements.txt
@@ -220,7 +222,7 @@ python       3.9-slim   609da079b03a   About an hour ago   115MB
 All right, now let's run our application inside the container.
 
 ```bash
-$ docker run app myapp --job JOB-1 
+$ docker run app:v0 myapp --job JOB-1 
 20:56:33: JOB-1 started
 ```
 
@@ -258,8 +260,18 @@ Note, that you can start the container with `--rm` flag meaning that the contain
 will be automatically removed after stop.
 
 ```bash
-$ docker run --rm app myapp --job JOB-1 
+$ docker run --rm app:v0 myapp --job JOB-1 
 ```
+
+To run application with `slack` option, you need to pass Webhook URL via environment variable in docker.
+To do this, use `--env` option with `docker run` command.
+
+```bash
+$ docker run --rm --env SLACK_TEST_URL=$SLACK_TEST_URL app:v0 myapp --job docker-job --slack  
+13:19:16: docker-job started
+```
+
+<img src="https://github.com/viktorsapozhok/kubernetes-cronjob-tutorial/blob/master/docs/source/images/slack_2.png?raw=true" width="700">
 
 ## 4. Push docker images to the registry
 

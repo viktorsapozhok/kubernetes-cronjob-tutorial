@@ -1,5 +1,7 @@
 FROM python:3.9-slim
 
+ARG SLACK_TEST_URL
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r ./requirements.txt \
     && rm -f requirements.txt
