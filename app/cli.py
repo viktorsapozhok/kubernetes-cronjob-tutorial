@@ -17,23 +17,24 @@ def main(job, slack):
     else:
         text = f"{datetime.now().strftime('%H:%M:%S')}: {job} started"
 
-    webhook = WebhookClient(url=os.environ["SLACK_TEST_URL"]) if slack else None
-    _echo(text, webhook)
-
-
-def _echo(text, webhook = None):
-    """Send message to slack channel."""
-
     click.echo(text)
 
-    if webhook is not None:
-        try:
-            response = webhook.send(text=text)
-            assert response.status_code == 200
-            assert response.body == "ok"
-        except SlackApiError as e:
-            assert e.response["error"]
-            click.echo(f"Got an error: {e.response['error']}")
+    if slack is not None:
+        _send_to_slack(text)
+
+
+def _send_to_slack(text):
+    """Send message to slack channel."""
+
+    webhook = WebhookClient(url=os.environ["SLACK_TEST_URL"])
+
+    try:
+        response = webhook.send(text=text)
+        assert response.status_code == 200
+        assert response.body == "ok"
+    except SlackApiError as e:
+        assert e.response["error"]
+        click.echo(f"Got an error: {e.response['error']}")
 
 
 if __name__ == "__main__":

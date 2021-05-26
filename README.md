@@ -294,7 +294,7 @@ $ az group create --name myResourceGroup --location westeurope
 
 Now we can create an Azure Container Registry with `az acr create` command. We use the `Basic` SKU, which
 includes 10 GiB storage. Service tier can be changed at any time, you can use `az acr update` command to 
-switch between service tiers.
+switch between service tiers. 
 
 ```bash
 $ az acr create \
@@ -305,7 +305,7 @@ $ az acr create \
 ```
 
 To push our docker image to the registry, it has to be tagged with the server address `vanillacontainerregistry.azurecr.io`.
-You can find the address on Azure Portal. 
+You can find the address on Azure Portal. Use lowercase letters in registry name to avoid some warning messages.
 
 ```bash
 $ docker tag app:v0 vanillacontainerregistry.azurecr.io/app:v0
@@ -350,4 +350,14 @@ v0
 All good, we move on to the next step.
 
 ## 5. Create and configure Kubernetes cluster
+
+In Azure Kubernetes Service (AKS), nodes having the same configuration are combined into node pools.
+Each node pool contains underlying VMs that run your apps. AKS offers a feature called the cluster autoscaler
+to automatically scale node pools. Autoscaler saves costs by starting infrastructure before demand increases
+and releasing resources when demand decreases. In case we are running scheduled jobs without running any permanent
+workloads, we need to scale the whole cluster down to zero when there are no jobs running. However, at least
+one node must always be available in the cluster as it's used to run the system pods. Therefore, our strategy
+for running jobs in the cluster will be to keep only one node running idle when there are no jobs and 
+add nodes when we need it.
+
 
