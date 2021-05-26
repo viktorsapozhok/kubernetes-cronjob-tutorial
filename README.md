@@ -17,7 +17,7 @@ Read the [tutorial][1] for more.
 ## 1. Clone the application
 
 The application used in this tutorial to demonstrate the deployment process is 
-a simple Python app printing the current time to stdout.
+a simple Python app printing message to stdout and to slack channel.
 
 Clone the application to your development environment.
 
@@ -38,22 +38,39 @@ When its installed, you can verify the installation calling `myapp` from the com
 $ myapp --help
 Usage: myapp [OPTIONS]
 
-  Demo app printing current time to stdout.
+  Demo app printing current time and job name.
 
 Options:
   --job TEXT  Job name
+  --slack     Send message to slack
   --help      Show this message and exit.
 ```
 
-Run it, to print the current time to console:
+You can run it without sending messages to the slack channel, only printing to console.
+In this case, don't pass the `slack` flag.
 
 ```shell
 $ myapp --job JOB-1 
-15:42:36: JOB-1 started
+14:00:26: JOB-1 started
 ```
 
-Application is installed to your development environment. Now we can start
-preparing it to the deployment.
+To integrate it with slack, you need to configure an incoming webhook for your channel. Read [here][2] 
+how to do this. Add a Webhook URL you will get to an environment variable `SLACK_TEST_URL`.
+
+[2]: https://api.slack.com/messaging/webhooks# "Sending messages using incoming Webhooks"
+
+Verify that it works by passing `slack` flag to `myapp` command.
+
+```bash
+$ myapp --job JOB-1 --slack 
+14:00:34: JOB-1 started
+```
+
+If everything is correct then you should receive the same message in your slack channel.
+
+![image info](./docs/source/images/slack.png)
+
+Application is installed to your development environment, and we can start preparing it to the deployment.
 
 ## 2. Install docker and docker-compose
 
@@ -107,9 +124,9 @@ Reboot if you got error.
 Now, after docker engine is installed, we install docker compose, a tool for
 defining and running multi-container docker applications. 
 
-Follow the [official installation guide][2] and test the installation verifying compose version.
+Follow the [official installation guide][3] and test the installation verifying compose version.
 
-[2]: https://docs.docker.com/compose/install/ "Install Docker Compose"
+[3]: https://docs.docker.com/compose/install/ "Install Docker Compose"
 
 ```bash
 $ docker-compose --version
@@ -249,9 +266,9 @@ $ docker run --rm app myapp --job JOB-1
 Azure Container Registry (ACR) is a private registry for container images, it allows
 you to build, store, and manage container images. In this tutorial, we deploy an ACR instance
 and push a docker image to it. This requires that you have Azure CLI installed. Follow the
-[official guide][3] if you need to install it.
+[official guide][4] if you need to install it.
 
-[3]: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli "Install Azure CLI"
+[4]: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli "Install Azure CLI"
 
 To create an ACR instance, we need to have a resource group, a logical container that
 include all the related resources to your solution. Create a new group with `az group create` command or
@@ -316,5 +333,7 @@ Result
 v0
 ```
 
-All good, move on to the next step.
+All good, we move on to the next step.
+
+## 5. Create and configure Kubernetes cluster
 
