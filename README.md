@@ -266,7 +266,11 @@ includes 10 GiB storage. Service tier can be changed at any time, you can use `a
 switch between service tiers.
 
 ```bash
-$ az acr create --resource-group myResourceGroup --name vanillacontainerregistry --sku Basic --location westeurope
+$ az acr create \
+  --resource-group myResourceGroup \
+  --name vanillacontainerregistry \
+  --sku Basic \
+  --location westeurope
 ```
 
 To push our docker image to the registry, it has to be tagged with the server address `vanillacontainerregistry.azurecr.io`.
