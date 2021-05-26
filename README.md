@@ -68,7 +68,7 @@ $ myapp --job JOB-1 --slack
 
 If everything is correct then you should receive the same message in your slack channel.
 
-![image info](./docs/source/images/slack.png)
+![image info](./docs/source/images/slack.png | width=600)
 
 Application is installed to your development environment, and we can start preparing it to the deployment.
 
