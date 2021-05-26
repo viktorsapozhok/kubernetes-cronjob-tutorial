@@ -391,12 +391,12 @@ $ kubectl get nodes
 NAME                                STATUS   ROLES   AGE   VERSION
 aks-nodepool1-72918754-vmss000000   Ready    agent   20m   v1.19.9
 
-$ kubectl get nodes -L agentpool -L beta.kubernetes.io/instance-type 
+$ kubectl get nodes -L agentpool -L node.kubernetes.io/instance-type 
 NAME                                STATUS   ROLES   AGE   VERSION   AGENTPOOL   INSTANCE-TYPE
 aks-nodepool1-72918754-vmss000000   Ready    agent   37m   v1.19.9   nodepool1   Standard_DS2_v2
 ```
 
-Cluster has one node with Standard_DS2_v2 size (2 vCPUs, 7 GB RAM, 14 GB storage). This will
+Cluster has one node with VM size Standard_DS2_v2 (2 vCPUs, 7 GB RAM, 14 GB storage). This will
 generate about 100 usd/month costs. 
 
 We can check what is running on the node with `kubectl get pods` command. So far, it has only
@@ -416,4 +416,22 @@ kube-system   kube-proxy-xqgjl                      1/1     Running   0         
 kube-system   metrics-server-77c8679d7d-2x26x       1/1     Running   0          27m
 kube-system   tunnelfront-6dcdcd4f8d-pcgcb          1/1     Running   0          27m
 ```
+
+We can update node pool (we still have a single pool called `nodepool1`) to activate 
+autoscaler and enable it to increase the number of nodes up to 5 if needed.
+
+```bash
+$ az aks nodepool update \
+  --resource-group myResourceGroup \
+  --cluster-name vanilla-aks-test \
+  --name nodepool1 \
+  --enable-cluster-autoscaler \
+  --min-count 1 \
+  --max-count 5
+```
+
+This configuration will be enough for running a variety of lightweight jobs. Let's try to 
+deploy our application to the cluster.
+
+## 6. Deploy cron jobs to Azure Kubernetes Service
 
