@@ -357,7 +357,63 @@ to automatically scale node pools. Autoscaler saves costs by starting infrastruc
 and releasing resources when demand decreases. In case we are running scheduled jobs without running any permanent
 workloads, we need to scale the whole cluster down to zero when there are no jobs running. However, at least
 one node must always be available in the cluster as it's used to run the system pods. Therefore, our strategy
-for running jobs in the cluster will be to keep only one node running idle when there are no jobs and 
-add nodes when we need it.
+for running jobs in the cluster will be to keep only one node running idle when there are no jobs, add nodes before 
+job startup and shut them down after job has finished.
 
+Let's create an AKS cluster with `az aks create` command.
+
+```bash
+$ az aks create \
+  --resource-group myResourceGroup \
+  --name vanilla-aks-test \
+  --node-count 1 \
+  --attach-acr vanillacontainerregistry \
+  --location westeurope
+```
+
+Specifying `node-count` option as 1, we created a cluster with default node pool that contains only one node.
+By default, it contains 3 nodes. The number of nodes can be changed after cluster creating with `az aks scale`
+command. We also granted the cluster identity the right to pull images from our container registry 
+using`attach-acr` option.
+
+To connect to the cluster from local machine we use Kubernetes client `kubectl`, it's included in Azure CLI and 
+should be already installed. To configure `kubectl`, use the `az aks get-credentials` command.
+
+```bash
+$ az aks get-credentials --resource-group myResourceGroup --name vanilla-aks-test
+Merged "vanilla-aks-test" as current context in /home/user/.kube/config
+```
+
+Now we can connect to cluster and display nodes information.
+
+```bash
+$ kubectl get nodes
+NAME                                STATUS   ROLES   AGE   VERSION
+aks-nodepool1-72918754-vmss000000   Ready    agent   20m   v1.19.9
+
+$ kubectl get nodes -L agentpool -L beta.kubernetes.io/instance-type 
+NAME                                STATUS   ROLES   AGE   VERSION   AGENTPOOL   INSTANCE-TYPE
+aks-nodepool1-72918754-vmss000000   Ready    agent   37m   v1.19.9   nodepool1   Standard_DS2_v2
+```
+
+Cluster has one node with Standard_DS2_v2 size (2 vCPUs, 7 GB RAM, 14 GB storage). This will
+generate about 100 usd/month costs. 
+
+We can check what is running on the node with `kubectl get pods` command. So far, it has only
+system processes (pods) running.
+
+```bash
+$ kubectl get pods
+No resources found in default namespace.
+
+$ kubectl get pods --all-namespaces
+NAMESPACE     NAME                                  READY   STATUS    RESTARTS   AGE
+kube-system   azure-ip-masq-agent-55qmp             1/1     Running   0          26m
+kube-system   coredns-76c97c8599-8qxlz              1/1     Running   0          27m
+kube-system   coredns-76c97c8599-sv2g4              1/1     Running   0          26m
+kube-system   coredns-autoscaler-599949fd86-2dq4b   1/1     Running   0          27m
+kube-system   kube-proxy-xqgjl                      1/1     Running   0          26m
+kube-system   metrics-server-77c8679d7d-2x26x       1/1     Running   0          27m
+kube-system   tunnelfront-6dcdcd4f8d-pcgcb          1/1     Running   0          27m
+```
 
