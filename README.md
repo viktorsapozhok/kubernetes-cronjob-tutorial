@@ -208,7 +208,7 @@ $ docker run app myapp --job JOB-1
 ```
 
 The container has been started and application was successfully running inside the container.
-When application finished, the container has been stopped. Docker containers are 
+Container stops after the application has finished. Docker containers are 
 not automatically removed when you stop them. To remove one or more containers, use 
 `docker container rm` command specifying container IDs you want to remove.
 
