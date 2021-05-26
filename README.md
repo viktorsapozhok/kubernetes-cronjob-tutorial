@@ -271,6 +271,8 @@ $ docker run --rm --env SLACK_TEST_URL=$SLACK_TEST_URL app:v0 myapp --job docker
 13:19:16: docker-job started
 ```
 
+If everything works, you will receive message in slack channel.
+
 <img src="https://github.com/viktorsapozhok/kubernetes-cronjob-tutorial/blob/master/docs/source/images/slack_2.png?raw=true" width="700">
 
 ## 4. Push docker images to the registry
