@@ -507,3 +507,13 @@ app-job-1   */5 * * * *   False     0        18s             4m49s
 Application is running in Kubernetes cluster and sending messages to slack.
 
 <img src="https://github.com/viktorsapozhok/kubernetes-cronjob-tutorial/blob/master/docs/source/images/slack_3.png?raw=true" width="700">
+
+Let's delete the job from cluster and redeploy it in more general way.
+
+```bash
+$ kubectl --namespace app delete cronjob app-job-1
+cronjob.batch "app-job-1" deleted
+```
+
+## 7. Automate deployment to AKS with Makefile
+
