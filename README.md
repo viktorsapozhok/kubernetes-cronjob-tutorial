@@ -435,3 +435,75 @@ deploy our application to the cluster.
 
 ## 6. Deploy cron jobs to Azure Kubernetes Service
 
+To deploy our application, we will use the `kubectl apply` command. This command parses 
+the manifest file and creates the defined Kubernetes objects. We start from creating such
+a manifest file for our application cron job.
+
+In root directory, we create a file called `aks-manifest.yml` and specify it as follows:
+
+```yaml
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: app-job-1
+  namespace: app
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: app
+            image: vanillacontainerregistry.azurecr.io/app:v0
+            env:
+              - name: SLACK_TEST_URL
+                value: my-webhook-url
+            command: ["/bin/sh", "-c"]
+            args: ["myapp --job AKS-JOB-1 --slack"]
+            resources:
+              requests:
+                cpu: "0.5"
+                memory: 500Mi
+              limits:
+                cpu: "1"
+                memory: 1000Mi
+          restartPolicy: Never
+      backoffLimit: 2
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+```
+
+Here we specified the job name `app-job-1` and the namespace `app`. Namespaces in Kubernetes provide a scopes for names
+and can be used to divide cluster resources between users or projects. Not necessary to use namespaces when you don't feel that
+you need it, but in case you want to logically separate one bunch of jobs from others it might be useful. Note, that namespace
+`app` still doesn't exist, and we need to create it before applying the manifest.
+
+```bash
+$ kubectl create namespace app
+namespace/app created
+```
+
+Next, we specify the crontab expression used as a schedule for our job. Expression `*/5 * * * *` means that job is 
+supposed to run on every 5th minute. We pass the name of the docker image to be pulled from 
+container registry attached to cluster, and specify the container name as `app`. Remove environment 
+variable spec given by `env` key from manifest if you didn't integrate application with slack channel. 
+
+Now we can apply the deployment to cluster.
+
+```bash
+$ kubectl --namespace app apply -f ./aks-manifest.yml  
+cronjob.batch/app-job-1 created
+```
+
+You can view some short information about the job with `kubectl get` command.
+
+```bash
+$ kubectl get cronjob --namespace app
+NAME        SCHEDULE      SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+app-job-1   */5 * * * *   False     0        18s             4m49s
+```
+
+Application is running in Kubernetes cluster and sending messages to slack.
+
+<img src="https://github.com/viktorsapozhok/kubernetes-cronjob-tutorial/blob/master/docs/source/images/slack_3.png?raw=true" width="700">

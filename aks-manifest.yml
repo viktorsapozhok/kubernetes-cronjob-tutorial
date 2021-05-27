@@ -1,0 +1,30 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: app-job-1
+  namespace: app
+spec:
+  schedule: "*/5 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: app
+            image: vanillacontainerregistry.azurecr.io/app:v0
+            env:
+              - name: SLACK_TEST_URL
+                value: my-webhook-url
+            command: ["/bin/sh", "-c"]
+            args: ["myapp --job AKS-JOB-1 --slack"]
+            resources:
+              requests:
+                cpu: "0.5"
+                memory: 500Mi
+              limits:
+                cpu: "1"
+                memory: 1000Mi
+          restartPolicy: Never
+      backoffLimit: 2
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2

@@ -19,7 +19,7 @@ def main(job, slack):
 
     click.echo(text)
 
-    if slack is not None:
+    if slack:
         _send_to_slack(text)
 
 
