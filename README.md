@@ -552,7 +552,7 @@ As long as we are going to aggregate multiple shell commands into single command
 need a Makefile. Let's create one in the project's root directory. To read the contents
 of a YAML file from Makefile, we can use `yq` utility. Documentation on it can be found [here][5].
 
-[5] https://mikefarah.gitbook.io/yq/ "yq is a lightweight and portable command-line YAML processor"
+[5]: https://mikefarah.gitbook.io/yq/ "yq is a lightweight and portable command-line YAML processor"
 
 On linux it can be installed via snap. We need `v4` version.
 
