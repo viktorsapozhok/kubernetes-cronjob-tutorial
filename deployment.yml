@@ -1,17 +1,18 @@
-aks:
-  cluster_name: myAKSCluster
-  resource_group: myResourceGroup
-  namespace: myApp
+rg:
+  name: myResourceGroup
 acr:
-  name: myContainerRegistry
-  url: myContainerRegistry/azurecr.io
+  name: vanillacontainerregistry
+  url: vanillacontainerregistry/azurecr.io
+aks:
+  cluster_name: vanilla-aks-test
+  namespace: app
 jobs:
   job1:
-    schedule: "1 * * * *"
-    command: "myapp run --job job1"
+    schedule: "*/5 * * * *"
+    command: "myapp run --job JOB-1 --slack"
   job2:
-    schedule: "3 * * * *"
-    command: "myapp run --job job2"
+    schedule: "*/10 * * * *"
+    command: "myapp run --job JOB-2 --slack"
   job3:
-    schedule: "5 * * * *"
-    command: "myapp run --job job3"
+    schedule: "*/20 * * * *"
+    command: "myapp run --job JOB-3 --slack"

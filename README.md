@@ -476,7 +476,7 @@ spec:
 
 Here we specified the job name `app-job-1` and the namespace `app`. Namespaces in Kubernetes provide a scopes for names
 and can be used to divide cluster resources between users or projects. Not necessary to use namespaces when you don't feel that
-you need it, but in case you want to logically separate one bunch of jobs from others it might be useful. Note, that namespace
+you need it, but in case you want to logically separate one bunch of jobs from the other, it might be useful. Note, that namespace
 `app` still doesn't exist, and we need to create it before applying the manifest.
 
 ```bash
@@ -508,7 +508,10 @@ Application is running in Kubernetes cluster and sending messages to slack.
 
 <img src="https://github.com/viktorsapozhok/kubernetes-cronjob-tutorial/blob/master/docs/source/images/slack_3.png?raw=true" width="700">
 
-Let's delete the job from cluster and redeploy it in more general way.
+Note, that we hardcoded constants such as job name, schedule, etc. in the manifest file. 
+This configuration works in case of our demo job, but in real life project you get a setup with 
+many jobs and need therefore to create a manifest for every task. This is the option
+we want to avoid, so let's delete our job from cluster and redeploy it in more general way.
 
 ```bash
 $ kubectl --namespace app delete cronjob app-job-1
@@ -517,3 +520,121 @@ cronjob.batch "app-job-1" deleted
 
 ## 7. Automate deployment to AKS with Makefile
 
+Suppose that we have 3 jobs with different schedules, and we want 
+to deploy them with a single command. To do this, we replace the constants in manifest
+by variables and will substitute them with `envsubst` utility based on a job setup.
+
+First, let's create a file called `deployment.yml` and place it in root directory. In this file,
+we will store all the parameters used for deployment process.
+
+```yaml
+rg: 
+  name: myResourceGroup
+acr:
+  name: vanillacontainerregistry
+  url: vanillacontainerregistry/azurecr.io
+aks:
+  cluster_name: vanilla-aks-test
+  namespace: app
+jobs:
+  job1:
+    schedule: "*/5 * * * *"
+    command: "myapp run --job JOB-1 --slack"
+  job2:
+    schedule: "*/10 * * * *"
+    command: "myapp run --job JOB-2 --slack"
+  job3:
+    schedule: "*/20 * * * *"
+    command: "myapp run --job JOB-3 --slack"
+```
+
+As long as we are going to aggregate multiple shell commands into single command, we 
+need a Makefile. Let's create one in the project's root directory. To read the contents
+of a YAML file from Makefile, we can use `yq` utility. Documentation on it can be found [here][5].
+
+[5] https://mikefarah.gitbook.io/yq/ "yq is a lightweight and portable command-line YAML processor"
+
+On linux it can be installed via snap. We need `v4` version.
+
+```bash
+$ snap install yq
+```
+
+In Makefile, we create a function `get_param` reading data from YAML file. It can be organized as follows:
+
+```bash
+get_param = yq e .$(1) deployment.yml
+
+AKS_NAME := $(shell $(call get_param,aks.cluster_name))
+
+.SILENT: print-cluster-name
+.PHONY: print-cluster-name
+print-cluster-name:
+	echo aks.cluster_name: $(AKS_NAME)
+```
+
+Now, if we run `make print-cluster-name` from project's root the name of AKS cluster from YAML file
+will be placed into `AKS_NAME` variable and displayed in stdout.
+
+```bash
+$ make print-cluster-name
+aks.cluster_name: vanilla-aks-test
+```
+
+We want to run a deployment script for each of our 3 jobs in a loop. This can be done
+with following Makefile setup:
+
+```bash
+MAKEFLAGS += --no-print-directory
+SHELL := /bin/bash
+
+JOB ?=
+
+get_param = yq e .$(1) deployment.yml
+
+JOBS := $(shell yq eval '.jobs | keys | join(" ")' deployment.yml)
+
+.SILENT: deploy
+.PHONY: deploy
+deploy:
+	$(eval SCHEDULE := $(shell $(call get_param,jobs.$(JOB).schedule)))
+	$(eval COMMAND := $(shell $(call get_param,jobs.$(JOB).command)))
+
+	echo deploying $(JOB)
+	echo schedule: "$(SCHEDULE)"
+	echo command: "$(COMMAND)"
+
+.SILENT: deploy-all
+.PHONY: deploy-all
+deploy-all:
+	for job in $(JOBS); do \
+		$(MAKE) JOB=$$job deploy; \
+		echo ""; \
+	done
+```
+
+Now we can deploy any individual job defined in `deplyment.yml`, or deploy all the jobs with 
+a single command.
+
+```bash
+$ make deploy JOB=job1
+deploying job1
+schedule: */5 * * * *
+command: myapp run --job JOB-1 --slack
+
+$ make deploy-all
+deploying job1
+schedule: */5 * * * *
+command: myapp run --job JOB-1 --slack
+
+deploying job2
+schedule: */10 * * * *
+command: myapp run --job JOB-2 --slack
+
+deploying job3
+schedule: */20 * * * *
+command: myapp run --job JOB-3 --slack
+```
+
+We are almost there. Now, what we need to do is to replace constants in manifest by placeholders
+and dynamically substitute these placeholders by corresponding values in a loop.

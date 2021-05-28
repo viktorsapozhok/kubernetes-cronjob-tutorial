@@ -1,33 +1,34 @@
-MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --no-print-directory
 SHELL := /bin/bash
 
 JOB ?=
 
 get_param = yq e .$(1) deployment.yml
 
-JOBS := $(shell yq eval '.jobs | keys | join(", ")' deployment.yml)
-
-SCHEDULE := $(shell $(call get_param,jobs.$(JOB).schedule))
-COMMAND := $(shell $(call get_param,jobs.$(JOB).command))
-
-NAMESPACE := $(shell $(call get_param,aks.namespace))
-KUBE = kubectl --namespace $(NAMESPACE)
+JOBS := $(shell yq eval '.jobs | keys | join(" ")' deployment.yml)
 
 .PHONY: help
 help:
 	@echo 'Tutorial commands:'
 	@echo
 	@echo 'Usage:'
-	@echo '  make test         Test command.'
+	@echo '  make deploy       Deploy single job.'
 	@echo
 
-.SILENT: test
-.PHONY: test
-test:
-	echo "$(SCHEDULE)"
-	echo $(COMMAND)
-	echo $(JOBS)
+.SILENT: deploy
+.PHONY: deploy
+deploy:
+	$(eval SCHEDULE := $(shell $(call get_param,jobs.$(JOB).schedule)))
+	$(eval COMMAND := $(shell $(call get_param,jobs.$(JOB).command)))
 
-.PHONY: get-pods
-get-pods:
-	$(KUBE) get pods
+	echo deploying $(JOB)
+	echo schedule: "$(SCHEDULE)"
+	echo command: "$(COMMAND)"
+
+.SILENT: deploy-all
+.PHONY: deploy-all
+deploy-all:
+	for job in $(JOBS); do \
+		$(MAKE) JOB=$$job deploy; \
+		echo ""; \
+	done
