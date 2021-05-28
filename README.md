@@ -521,10 +521,10 @@ cronjob.batch "app-job-1" deleted
 ## 7. Automate deployment to AKS with Makefile
 
 Suppose that we have 3 jobs with different schedules, and we want 
-to deploy them with a single command. To do this, we replace the constants in manifest
-by variables and will substitute them with `envsubst` utility based on a job setup.
+to deploy them with a single command. To do this, we can replace the constants in the manifest
+by placeholders and substitute them in a loop with corresponding values based on our deployment setup file.
 
-First, let's create a file called `deployment.yml` and place it in root directory. In this file,
+First, let's create a file called `deployment.yml` and place it in the root directory. In this file,
 we will store all the parameters used for deployment process.
 
 ```yaml
