@@ -1,22 +1,22 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: app-job-1
-  namespace: app
+  name: $NAME
+  namespace: $NAMESPACE
 spec:
-  schedule: "*/5 * * * *"
+  schedule: "$SCHEDULE"
   jobTemplate:
     spec:
       template:
         spec:
           containers:
-          - name: app
-            image: vanillacontainerregistry.azurecr.io/app:v0
+          - name: $CONTAINER
+            image: $IMAGE
             env:
               - name: SLACK_TEST_URL
-                value: my-webhook-url
+                value: $SLACK_TEST_URL
             command: ["/bin/sh", "-c"]
-            args: ["myapp --job AKS-JOB-1 --slack"]
+            args: ["$COMMAND"]
             resources:
               requests:
                 cpu: "0.5"

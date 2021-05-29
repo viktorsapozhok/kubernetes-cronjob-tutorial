@@ -562,7 +562,7 @@ $ snap install yq
 
 In Makefile, we create a function `get_param` reading data from YAML file. It can be organized as follows:
 
-```bash
+```makefile
 get_param = yq e .$(1) deployment.yml
 
 AKS_NAME := $(shell $(call get_param,aks.cluster_name))
@@ -584,7 +584,7 @@ aks.cluster_name: vanilla-aks-test
 We want to run a deployment script for each of our 3 jobs in a loop. This can be done
 with following Makefile setup:
 
-```bash
+```makefile
 MAKEFLAGS += --no-print-directory
 SHELL := /bin/bash
 
@@ -613,7 +613,7 @@ deploy-all:
 	done
 ```
 
-Now we can deploy any individual job defined in `deplyment.yml`, or deploy all the jobs with 
+Now we can deploy any individual job defined in `deployment.yml`, or deploy all the jobs with 
 a single command.
 
 ```bash
@@ -636,5 +636,120 @@ schedule: */20 * * * *
 command: myapp run --job JOB-3 --slack
 ```
 
-We are almost there. Now, what we need to do is to replace constants in manifest by placeholders
+We are almost there. Now, all we need is to replace constants in manifest by placeholders
 and dynamically substitute these placeholders by corresponding values in a loop.
+
+Here is how `aks-manifest.yml` looks after replacement the constants:
+
+```yaml
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: $NAME
+  namespace: $NAMESPACE
+spec:
+  schedule: "$SCHEDULE"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: $CONTAINER
+            image: $IMAGE
+            env:
+              - name: SLACK_TEST_URL
+                value: $SLACK_TEST_URL
+            command: ["/bin/sh", "-c"]
+            args: ["$COMMAND"]
+            resources:
+              requests:
+                cpu: "0.5"
+                memory: 500Mi
+              limits:
+                cpu: "1"
+                memory: 1000Mi
+          restartPolicy: Never
+      backoffLimit: 2
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+```
+
+Note, that you need to set environment variable `SLACK_TEST_URL` if you are going to run
+demo jobs with `slack` option, otherwise just remove `env` instruction.
+
+To dynamically set all other placeholders, we can use `envsubst` utility.
+
+```makefile
+MAKEFLAGS += --no-print-directory
+SHELL := /bin/bash
+
+JOB ?=
+VERSION = 0.1
+
+get_param = yq e .$(1) deployment.yml
+
+aks.namespace := $(shell $(call get_param,aks.namespace))
+acr.url := $(shell $(call get_param,acr.url))
+jobs := $(shell yq eval '.jobs | keys | join(" ")' deployment.yml)
+
+docker.tag = app
+docker.container = app
+docker.image = $(acr.url)/$(docker.tag):v$(VERSION)
+
+job.name = $(aks.namespace)-$(subst _,-,$(JOB))
+job.schedule = "$(shell $(call get_param,jobs.$(JOB).schedule))"
+job.command = $(shell $(call get_param,jobs.$(JOB).command))
+job.manifest.template = ./aks-manifest.yml
+job.manifest = ./concrete-aks-manifest.yml
+
+.PHONY: create-manifest
+create-manifest:
+	touch $(job.manifest)
+
+	NAME=$(job.name) \
+	NAMESPACE=$(aks.namespace) \
+	CONTAINER=$(docker.container) \
+	IMAGE=$(docker.image) \
+	SCHEDULE=$(job.schedule) \
+	COMMAND="$(job.command)" \
+	envsubst < $(job.manifest.template) > $(job.manifest)
+```
+
+Now, running `make create-manifest` from the root directory, you will create a new file called 
+`concrete-aks-manifest.yml` having job configuration parameters instead of placeholders.
+
+```bash
+$ make create-manifest JOB=job2
+
+$ cat concrete-aks-manifest.yml
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: app-job2
+  namespace: app
+spec:
+  schedule: "*/10 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: app
+            image: vanillacontainerregistry/azurecr.io/app:v0.1
+            env:
+              - name: SLACK_TEST_URL
+                value: https://hooks.slack.com/...
+            command: ["/bin/sh", "-c"]
+            args: ["myapp run --job JOB-2 --slack"]
+            resources:
+              requests:
+                cpu: "0.5"
+                memory: 500Mi
+              limits:
+                cpu: "1"
+                memory: 1000Mi
+          restartPolicy: Never
+      backoffLimit: 2
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 2
+```
