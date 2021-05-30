@@ -2,7 +2,7 @@ rg:
   name: myResourceGroup
 acr:
   name: vanillacontainerregistry
-  url: vanillacontainerregistry/azurecr.io
+  url: vanillacontainerregistry.azurecr.io
 aks:
   cluster_name: vanilla-aks-test
   namespace: app

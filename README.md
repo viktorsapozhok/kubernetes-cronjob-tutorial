@@ -532,7 +532,7 @@ rg:
   name: myResourceGroup
 acr:
   name: vanillacontainerregistry
-  url: vanillacontainerregistry/azurecr.io
+  url: vanillacontainerregistry.azurecr.io
 aks:
   cluster_name: vanilla-aks-test
   namespace: app
@@ -779,6 +779,7 @@ job.command = $(shell $(call get_param,jobs.$(JOB).command))
 job.manifest.template = ./aks-manifest.yml
 job.manifest = ./concrete-aks-manifest.yml
 
+.SILENT: _create-manifest
 .PHONY: _create-manifest
 _create-manifest:
 	touch $(job.manifest)
@@ -792,6 +793,7 @@ _create-manifest:
 	envsubst < $(job.manifest.template) > $(job.manifest)
 
 # Delete cronjob, (`-` means to continue on error)
+.SILENT: delete-job
 .PHONY: delete-job
 delete-job:
 	-kubectl --namespace $(aks.namespace) delete cronjob $(job.name)
@@ -805,6 +807,7 @@ delete-all:
 		echo ""; \
 	done
 
+.SILENT: deploy-job
 .PHONY: deploy-job
 deploy-job:
 	make delete-job

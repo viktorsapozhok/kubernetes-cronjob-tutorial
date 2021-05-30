@@ -9,6 +9,7 @@ get_param = yq e .$(1) deployment.yml
 resource_group := $(shell $(call get_param,rg.name))
 aks.namespace := $(shell $(call get_param,aks.namespace))
 aks.cluster := $(shell $(call get_param,aks.cluster_name))
+acr.name := $(shell $(call get_param,acr.name))
 acr.url := $(shell $(call get_param,acr.url))
 
 docker.tag = app
