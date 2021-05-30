@@ -690,7 +690,6 @@ get_param = yq e .$(1) deployment.yml
 
 aks.namespace := $(shell $(call get_param,aks.namespace))
 acr.url := $(shell $(call get_param,acr.url))
-jobs := $(shell yq eval '.jobs | keys | join(" ")' deployment.yml)
 
 docker.tag = app
 docker.container = app
@@ -753,3 +752,115 @@ spec:
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 2
 ```
+
+Now putting it all together, we get following:
+
+```makefile
+MAKEFLAGS += --no-print-directory
+SHELL := /bin/bash
+
+JOB ?=
+VERSION = 0.1
+
+get_param = yq e .$(1) deployment.yml
+
+aks.namespace := $(shell $(call get_param,aks.namespace))
+acr.url := $(shell $(call get_param,acr.url))
+
+docker.tag = app
+docker.container = app
+docker.image = $(acr.url)/$(docker.tag):v$(VERSION)
+
+jobs := $(shell yq eval '.jobs | keys | join(" ")' deployment.yml)
+
+job.name = $(aks.namespace)-$(subst _,-,$(JOB))
+job.schedule = "$(shell $(call get_param,jobs.$(JOB).schedule))"
+job.command = $(shell $(call get_param,jobs.$(JOB).command))
+job.manifest.template = ./aks-manifest.yml
+job.manifest = ./concrete-aks-manifest.yml
+
+.PHONY: _create-manifest
+_create-manifest:
+	touch $(job.manifest)
+
+	NAME=$(job.name) \
+	NAMESPACE=$(aks.namespace) \
+	CONTAINER=$(docker.container) \
+	IMAGE=$(docker.image) \
+	SCHEDULE=$(job.schedule) \
+	COMMAND="$(job.command)" \
+	envsubst < $(job.manifest.template) > $(job.manifest)
+
+# Delete cronjob, (`-` means to continue on error)
+.PHONY: delete-job
+delete-job:
+	-kubectl --namespace $(aks.namespace) delete cronjob $(job.name)
+
+.SILENT: delete-all
+.PHONY: delete-all
+delete-all:
+	for job in $(jobs); do \
+		echo "removing $$job"; \
+		$(MAKE) JOB=$$job delete-job; \
+		echo ""; \
+	done
+
+.PHONY: deploy-job
+deploy-job:
+	make delete-job
+	make _create-manifest
+	kubectl apply -f $(job.manifest)
+	rm $(job.manifest)
+
+.SILENT: deploy-all
+.PHONY: deploy-all
+deploy-all:
+	for job in $(jobs); do \
+		echo "deploying $$job"; \
+		$(MAKE) JOB=$$job deploy-job; \
+		echo ""; \
+	done
+```
+
+That's it. Let's deploy `job1`.
+
+```bash
+$ kubectl --namespace app get cronjobs
+No resources found in app namespace.
+
+$ make deploy-job JOB=job1
+cronjob.batch "app-job1" deleted
+cronjob.batch/app-job1 created
+
+$ kubectl --namespace app get cronjobs
+NAME       SCHEDULE      SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+app-job1   */5 * * * *   False     0        <none>          30s
+```
+
+Job deployed and running in Kubernetes. Let's deploy all jobs together.
+
+```bash
+$ make deploy-all
+deploying job1
+Error from server (NotFound): cronjobs.batch "app-job1" not found
+make[2]: [Makefile:41: delete-job] Error 1 (ignored)
+cronjob.batch/app-job1 created
+
+deploying job2
+Error from server (NotFound): cronjobs.batch "app-job2" not found
+make[2]: [Makefile:41: delete-job] Error 1 (ignored)
+cronjob.batch/app-job2 created
+
+deploying job3
+Error from server (NotFound): cronjobs.batch "app-job3" not found
+make[2]: [Makefile:41: delete-job] Error 1 (ignored)
+cronjob.batch/app-job3 created
+
+$ kubectl --namespace app get cronjobs
+NAME       SCHEDULE       SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+app-job1   */5 * * * *    False     0        <none>          38s
+app-job2   */10 * * * *   False     0        <none>          37s
+app-job3   */20 * * * *   False     0        <none>          31s
+```
+
+All jobs deployed.
