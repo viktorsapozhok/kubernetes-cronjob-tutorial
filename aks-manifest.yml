@@ -25,6 +25,8 @@ spec:
                 cpu: "1"
                 memory: 1000Mi
           restartPolicy: Never
+          nodeSelector:
+            agentpool: $AGENTPOOL
       backoffLimit: 2
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 2

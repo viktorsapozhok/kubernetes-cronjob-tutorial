@@ -550,13 +550,13 @@ aks:
 jobs:
   job1:
     schedule: "*/5 * * * *"
-    command: "myapp run --job JOB-1 --slack"
+    command: "myapp --job JOB-1 --slack"
   job2:
     schedule: "*/10 * * * *"
-    command: "myapp run --job JOB-2 --slack"
+    command: "myapp --job JOB-2 --slack"
   job3:
     schedule: "*/20 * * * *"
-    command: "myapp run --job JOB-3 --slack"
+    command: "myapp --job JOB-3 --slack"
 ```
 
 As long as we are going to aggregate multiple shell commands into single command, we 
@@ -622,20 +622,20 @@ a single command.
 $ make deploy JOB=job1
 deploying job1
 schedule: */5 * * * *
-command: myapp run --job JOB-1 --slack
+command: myapp --job JOB-1 --slack
 
 $ make deploy-all
 deploying job1
 schedule: */5 * * * *
-command: myapp run --job JOB-1 --slack
+command: myapp --job JOB-1 --slack
 
 deploying job2
 schedule: */10 * * * *
-command: myapp run --job JOB-2 --slack
+command: myapp --job JOB-2 --slack
 
 deploying job3
 schedule: */20 * * * *
-command: myapp run --job JOB-3 --slack
+command: myapp --job JOB-3 --slack
 ```
 
 We are almost there. Now, all we need is to replace constants in manifest by placeholders
@@ -737,7 +737,7 @@ spec:
               - name: SLACK_TEST_URL
                 value: https://hooks.slack.com/...
             command: ["/bin/sh", "-c"]
-            args: ["myapp run --job JOB-2 --slack"]
+            args: ["myapp --job JOB-2 --slack"]
             resources:
               requests:
                 cpu: "0.5"
@@ -862,3 +862,204 @@ app-job3   */20 * * * *   False     0        <none>          31s
 Here is what we receive in slack channel.
 
 <img src="https://github.com/viktorsapozhok/kubernetes-cronjob-tutorial/blob/master/docs/source/images/slack_4.png?raw=true" width="700">
+
+## 8. Multiple node pools setup
+
+Until now, we have used only one node pool, contained nodes with Standard_DS2_v2 size.
+In case, you have a job required more resources, e.g. high memory utilization, NVIDIA GPUs etc, 
+you need another node pool with nodes satisfied your requirements. The second node pool
+will be more expensive than the default pool, and we need to configure the cluster in a way
+that only jobs required more resources will be running in a second pool, whereas all other 
+jobs continue running in the default pool.
+
+Let's add a new job `job4` to our deployment config. 
+
+```yaml
+jobs:
+  ...
+  job4:
+    schedule: "0 12 * * *"
+    command: "myapp --job TURBO-JOB --slack"
+```
+
+Assume, it will be running once a day at 12:00 UTC on a machine with Standard_DS5_v2 size 
+having 16 CPUs and 56 GB RAM. Running on such a machine for 730 hours a month will generate 
+costs about 800 Usd/month, but if the job takes 1-2 hours to complete we can significantly 
+reduce our costs using autoscaler, immediately releasing expensive resources when after the 
+job has completed.
+
+Add a new pool to cluster with `az aks nodepool add` command, specifying pool's name as `turbo`.
+
+```bash
+$ az aks nodepool add \
+  --resource-group myResourceGroup \
+  --cluster-name vanilla-aks-test \
+  --name turbo \
+  --node-count 1 \
+  --min-count 0 \
+  --max-count 1 \
+  --enable-cluster-autoscaler \
+  --max-pods 16 \
+  --node-vm-size Standard_DS5_v2
+```
+
+Configuring pool in such a way, it will be scaled down to 0 after `job4` has completed.
+For more final tweaking, you can configure autoscaler settings provided by `cluster-autoscaler-options`.
+
+```bash
+$ az aks update \
+  --resource-group myResourceGroup \
+  --name vanilla-aks-test \
+  --cluster-autoscaler-profile scale-down-delay-after-add=3m scale-down-unneeded-time=3m
+```
+
+You can always delete a pool with `az aks nodepool delete` command.
+
+```bash
+$ az aks nodepool delete \
+  --resource-group myResourceGroup \
+  --cluster-name vanilla-aks-test \
+  --name turbo
+```
+
+As a final touch, we add a mapping between jobs and pools specifying `nodeSelector` instruction
+in manifest file.
+
+```yaml
+apiVersion: batch/v1beta1
+kind: CronJob
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          ...
+          nodeSelector:
+            agentpool: $AGENTPOOL
+          ...
+```
+
+Define `agentpool` for every job in deployment config.
+
+```yaml
+jobs:
+  job1:
+    schedule: "*/5 * * * *"
+    command: "myapp --job JOB-1 --slack"
+    agentpool: nodepool1
+  job2:
+    schedule: "*/10 * * * *"
+    command: "myapp --job JOB-2 --slack"
+    agentpool: nodepool1
+  job3:
+    schedule: "*/20 * * * *"
+    command: "myapp --job JOB-3 --slack"
+    agentpool: nodepool1
+  job4:
+    schedule: "0 12 * * *"
+    command: "myapp --job TURBO-JOB --slack"
+    agentpool: turbo
+```
+
+Integrate `AGENTPOOL` variable to Makefile.
+
+```makefile
+JOB ?=
+VERSION = 0.1
+
+get_param = yq e .$(1) deployment.yml
+
+aks.namespace := $(shell $(call get_param,aks.namespace))
+acr.url := $(shell $(call get_param,acr.url))
+
+docker.tag = app
+docker.container = app
+docker.image = $(acr.url)/$(docker.tag):v$(VERSION)
+
+jobs := $(shell yq eval '.jobs | keys | join(" ")' deployment.yml)
+
+job.name = $(aks.namespace)-$(subst _,-,$(JOB))
+job.schedule = "$(shell $(call get_param,jobs.$(JOB).schedule))"
+job.command = $(shell $(call get_param,jobs.$(JOB).command))
+job.agentpool = $(shell $(call get_param,jobs.$(JOB).agentpool))
+job.manifest.template = ./aks-manifest.yml
+job.manifest = ./concrete-aks-manifest.yml
+
+_create-manifest:
+	touch $(job.manifest)
+
+	NAME=$(job.name) \
+	NAMESPACE=$(aks.namespace) \
+	CONTAINER=$(docker.container) \
+	IMAGE=$(docker.image) \
+	SCHEDULE=$(job.schedule) \
+	COMMAND="$(job.command)" \
+	AGENTPOOL=$(job.agentpool) \
+	envsubst < $(job.manifest.template) > $(job.manifest)
+```
+
+Let's deploy all four jobs and see what happens when `job4` is running.
+
+```bash
+$ make deploy-all
+
+$ kubectl --namespace app get cronjobs
+NAME       SCHEDULE       SUSPEND   ACTIVE   LAST SCHEDULE   AGE
+app-job1   */5 * * * *    False     0        <none>          12s
+app-job2   */10 * * * *   False     0        <none>          10s
+app-job3   */20 * * * *   False     0        <none>          9s
+app-job4   0 12 * * *     False     0        <none>          7s
+```
+
+Now we start `job4`.
+
+```bash
+$ make run-job-now JOB=job4
+
+$ kubectl --namespace app get pods
+NAME                              READY   STATUS      RESTARTS   AGE
+app-job1-1622408700-svbgq         0/1     Completed   0          3m10s
+app-job4-2021.05.30.23.07-gbrfs   0/1     Pending     0          15s
+```
+
+We see that `job1` has finished and `job4` is pending. Let's check what happens on the pod.
+
+```bash
+$ kubectl describe pod app-job4-2021.05.30.23.07-gbrfs --namespace app
+Events:
+  Type     Reason            Age                    From                Message
+  ----     ------            ----                   ----                -------
+  Normal   TriggeredScaleUp  6m9s                   cluster-autoscaler  pod triggered scale-up: [{aks-turbo-72918754-vmss 0->1 (max: 1)}]
+  Warning  FailedScheduling  4m53s (x3 over 6m13s)  default-scheduler   0/1 nodes are available: 1 node(s) didn't match node selector.
+  Warning  FailedScheduling  4m27s (x2 over 4m36s)  default-scheduler   0/2 nodes are available: 1 node(s) didn't match node selector, 1 node(s) had taint {node.kubernetes.io/not-ready: }, that the pod didn't tolerate.
+  Normal   Scheduled         4m16s                  default-scheduler   Successfully assigned app/app-job4-2021.05.30.23.07-gbrfs to aks-turbo-72918754-vmss000001
+  Normal   Pulling           4m15s                  kubelet             Pulling image "vanillacontainerregistry.azurecr.io/app:v0.1"
+  Normal   Pulled            4m11s                  kubelet             Successfully pulled image "vanillacontainerregistry.azurecr.io/app:v0.1" in 4.337866521s
+  Normal   Created           4m11s                  kubelet             Created container app
+  Normal   Started           4m11s                  kubelet             Started container app
+```
+
+We see that there are no nodes which would tolerate node selector, and autoscaler triggered a scale-up event.
+It started the node in `turbo` pool, assigned job to it, and started the container.
+
+If we look at pod events for `job1`, we see that job has been assigned to the node in our default pool `nodepool1`.
+The node was already available and autoscaler didn't trigger a scale-up event.
+
+```bash
+$ kubectl describe pod app-job1-1622408700-svbgq --namespace app 
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  39s   default-scheduler  Successfully assigned app/app-job1-1622408700-svbgq to aks-nodepool1-72918754-vmss000000
+  Normal  Pulled     38s   kubelet            Container image "vanillacontainerregistry.azurecr.io/app:v0.1" already present on machine
+  Normal  Created    38s   kubelet            Created container app
+  Normal  Started    38s   kubelet            Started container app
+```
+
+That's it. We have successfully configured our kubernetes cluster for the case of multiple pools.
+
+## 9. Repository
+
+Repository with this tutorial can be found [here][6]. Star it, if you find it useful.
+
+[6]: https://github.com/viktorsapozhok/kubernetes-cronjob-tutorial "kubernetes-cronjob-tutorial"

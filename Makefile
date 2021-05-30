@@ -21,8 +21,11 @@ jobs := $(shell yq eval '.jobs | keys | join(" ")' deployment.yml)
 job.name = $(aks.namespace)-$(subst _,-,$(JOB))
 job.schedule = "$(shell $(call get_param,jobs.$(JOB).schedule))"
 job.command = $(shell $(call get_param,jobs.$(JOB).command))
+job.agentpool = $(shell $(call get_param,jobs.$(JOB).agentpool))
 job.manifest.template = ./aks-manifest.yml
 job.manifest = ./concrete-aks-manifest.yml
+
+time.now = $(shell date +"%Y.%m.%d.%H.%M")
 
 .PHONY: help
 help:
@@ -56,6 +59,7 @@ _create-manifest:
 	IMAGE=$(docker.image) \
 	SCHEDULE=$(job.schedule) \
 	COMMAND="$(job.command)" \
+	AGENTPOOL=$(job.agentpool) \
 	envsubst < $(job.manifest.template) > $(job.manifest)
 
 .PHONY: aks-login
@@ -93,3 +97,8 @@ deploy-all:
 		$(MAKE) JOB=$$job deploy-job; \
 		echo ""; \
 	done
+
+.PHONY: run-job-now
+run-job-now:
+	kubectl --namespace $(aks.namespace) create job \
+	--from=cronjob/$(job.name) $(job.name)-$(time.now)

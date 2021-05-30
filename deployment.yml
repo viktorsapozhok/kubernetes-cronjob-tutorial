@@ -10,9 +10,16 @@ jobs:
   job1:
     schedule: "*/5 * * * *"
     command: "myapp --job JOB-1 --slack"
+    agentpool: nodepool1
   job2:
     schedule: "*/10 * * * *"
     command: "myapp --job JOB-2 --slack"
+    agentpool: nodepool1
   job3:
     schedule: "*/20 * * * *"
     command: "myapp --job JOB-3 --slack"
+    agentpool: nodepool1
+  job4:
+    schedule: "0 12 * * *"
+    command: "myapp --job TURBO-JOB --slack"
+    agentpool: turbo
