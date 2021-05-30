@@ -508,6 +508,17 @@ Application is running in Kubernetes cluster and sending messages to slack.
 
 <img src="https://github.com/viktorsapozhok/kubernetes-cronjob-tutorial/blob/master/docs/source/images/slack_3.png?raw=true" width="700">
 
+To retrieve the application logs from the pod, you can use `kubectl logs` command
+
+```bash
+$ kubectl --namespace app get pods
+NAME                        READY   STATUS      RESTARTS   AGE
+app-job-1-1622391900-4crp8   0/1     Completed   0          13s
+
+$ kubectl logs --namespace app app-job-1-1622391900-4crp8
+13:20:10: JOB-1 started
+```
+
 Note, that we hardcoded constants such as job name, schedule, etc. in the manifest file. 
 This configuration works in case of our demo job, but in real life project you get a setup with 
 many jobs and need therefore to create a manifest for every task. This is the option
@@ -567,8 +578,6 @@ get_param = yq e .$(1) deployment.yml
 
 AKS_NAME := $(shell $(call get_param,aks.cluster_name))
 
-.SILENT: print-cluster-name
-.PHONY: print-cluster-name
 print-cluster-name:
 	echo aks.cluster_name: $(AKS_NAME)
 ```
@@ -585,17 +594,12 @@ We want to run a deployment script for each of our 3 jobs in a loop. This can be
 with following Makefile setup:
 
 ```makefile
-MAKEFLAGS += --no-print-directory
-SHELL := /bin/bash
-
 JOB ?=
 
 get_param = yq e .$(1) deployment.yml
 
 JOBS := $(shell yq eval '.jobs | keys | join(" ")' deployment.yml)
 
-.SILENT: deploy
-.PHONY: deploy
 deploy:
 	$(eval SCHEDULE := $(shell $(call get_param,jobs.$(JOB).schedule)))
 	$(eval COMMAND := $(shell $(call get_param,jobs.$(JOB).command)))
@@ -604,8 +608,6 @@ deploy:
 	echo schedule: "$(SCHEDULE)"
 	echo command: "$(COMMAND)"
 
-.SILENT: deploy-all
-.PHONY: deploy-all
 deploy-all:
 	for job in $(JOBS); do \
 		$(MAKE) JOB=$$job deploy; \
@@ -680,9 +682,6 @@ demo jobs with `slack` option, otherwise just remove `env` instruction.
 To dynamically set all other placeholders, we can use `envsubst` utility.
 
 ```makefile
-MAKEFLAGS += --no-print-directory
-SHELL := /bin/bash
-
 JOB ?=
 VERSION = 0.1
 
@@ -701,7 +700,6 @@ job.command = $(shell $(call get_param,jobs.$(JOB).command))
 job.manifest.template = ./aks-manifest.yml
 job.manifest = ./concrete-aks-manifest.yml
 
-.PHONY: create-manifest
 create-manifest:
 	touch $(job.manifest)
 
@@ -756,9 +754,6 @@ spec:
 Now putting it all together, we get following:
 
 ```makefile
-MAKEFLAGS += --no-print-directory
-SHELL := /bin/bash
-
 JOB ?=
 VERSION = 0.1
 
@@ -779,8 +774,6 @@ job.command = $(shell $(call get_param,jobs.$(JOB).command))
 job.manifest.template = ./aks-manifest.yml
 job.manifest = ./concrete-aks-manifest.yml
 
-.SILENT: _create-manifest
-.PHONY: _create-manifest
 _create-manifest:
 	touch $(job.manifest)
 
@@ -793,13 +786,9 @@ _create-manifest:
 	envsubst < $(job.manifest.template) > $(job.manifest)
 
 # Delete cronjob, (`-` means to continue on error)
-.SILENT: delete-job
-.PHONY: delete-job
 delete-job:
 	-kubectl --namespace $(aks.namespace) delete cronjob $(job.name)
 
-.SILENT: delete-all
-.PHONY: delete-all
 delete-all:
 	for job in $(jobs); do \
 		echo "removing $$job"; \
@@ -807,16 +796,12 @@ delete-all:
 		echo ""; \
 	done
 
-.SILENT: deploy-job
-.PHONY: deploy-job
 deploy-job:
 	make delete-job
 	make _create-manifest
 	kubectl apply -f $(job.manifest)
 	rm $(job.manifest)
 
-.SILENT: deploy-all
-.PHONY: deploy-all
 deploy-all:
 	for job in $(jobs); do \
 		echo "deploying $$job"; \
@@ -834,13 +819,17 @@ No resources found in app namespace.
 $ make deploy-job JOB=job1
 cronjob.batch "app-job1" deleted
 cronjob.batch/app-job1 created
+```
 
+Job is now deployed and running in Kubernetes.
+
+```bash
 $ kubectl --namespace app get cronjobs
 NAME       SCHEDULE      SUSPEND   ACTIVE   LAST SCHEDULE   AGE
 app-job1   */5 * * * *   False     0        <none>          30s
 ```
 
-Job deployed and running in Kubernetes. Let's deploy all jobs together.
+Let's deploy all jobs together.
 
 ```bash
 $ make deploy-all
@@ -858,7 +847,11 @@ deploying job3
 Error from server (NotFound): cronjobs.batch "app-job3" not found
 make[2]: [Makefile:41: delete-job] Error 1 (ignored)
 cronjob.batch/app-job3 created
+```
 
+All jobs have been deployed.
+
+```bash
 $ kubectl --namespace app get cronjobs
 NAME       SCHEDULE       SUSPEND   ACTIVE   LAST SCHEDULE   AGE
 app-job1   */5 * * * *    False     0        <none>          38s
@@ -866,4 +859,6 @@ app-job2   */10 * * * *   False     0        <none>          37s
 app-job3   */20 * * * *   False     0        <none>          31s
 ```
 
-All jobs deployed.
+Here is what we receive in slack channel.
+
+<img src="https://github.com/viktorsapozhok/kubernetes-cronjob-tutorial/blob/master/docs/source/images/slack_4.png?raw=true" width="700">

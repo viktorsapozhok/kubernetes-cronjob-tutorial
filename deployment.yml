@@ -9,10 +9,10 @@ aks:
 jobs:
   job1:
     schedule: "*/5 * * * *"
-    command: "myapp run --job JOB-1 --slack"
+    command: "myapp --job JOB-1 --slack"
   job2:
     schedule: "*/10 * * * *"
-    command: "myapp run --job JOB-2 --slack"
+    command: "myapp --job JOB-2 --slack"
   job3:
     schedule: "*/20 * * * *"
-    command: "myapp run --job JOB-3 --slack"
+    command: "myapp --job JOB-3 --slack"
