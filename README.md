@@ -8,7 +8,7 @@ You will learn how to:
 * Prepare a Python app for deployment to AKS and build a docker image.
 * Create an Azure container registry and push images to the registry.
 * Create and configure a Kubernetes cluster, scale it down to zero with autoscaler.
-* Schedule and deploy jobs to Kubernetes cluster.
+* Schedule and deploy jobs to Kubernetes cluster, run cron job manually.
 * Automate the deployment process with Makefile.
 
 Read the tutorial [here][1].
