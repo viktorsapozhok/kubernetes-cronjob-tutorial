@@ -100,5 +100,6 @@ deploy-all:
 
 .PHONY: run-job-now
 run-job-now:
-	kubectl --namespace $(aks.namespace) create job \
+	kubectl create job \
+	--namespace $(aks.namespace) \
 	--from=cronjob/$(job.name) $(job.name)-$(time.now)
