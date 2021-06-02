@@ -29,11 +29,20 @@ time.now = $(shell date +"%Y.%m.%d.%H.%M")
 
 .PHONY: help
 help:
-	@echo 'Tutorial commands:'
+	@echo 'Usage: make COMMAND [JOB]...'
 	@echo
-	@echo 'Usage:'
-	@echo '  make deploy       Deploy single job.'
+	@echo '  Tutorial commands'
 	@echo
+	@echo 'Commands:'
+	@echo '  build        Build docker image.'
+	@echo '  rebuild      Build docker image from scratch.'
+	@echo '  push         Push image to docker registry.'
+	@echo '  aks-login    Login to Azure Kubernetes Service.'
+	@echo '  delete-job   Delete one cron job from AKS.'
+	@echo '  delete-all   Delete all jobs from AKS.'
+	@echo '  deploy-job   Deploy one cron job to AKS.'
+	@echo '  deploy-all   Deploy all jobs to AKS.'
+	@echo '  run-job-now  Run one job manually.'
 
 .PHONY: build
 build:
